@@ -1,3 +1,0 @@
-item_type,item_code,hsn_code,item_name,brand,category,subcategory,discount,sales_price,mrp,wholesale_price,measure_unit,opening_stock,opening_unit,gst_rate,item_description,stock_status,min_stock,max_stock,abc_category,purchase_price,purchase_tax,purchase_gst
-Product,ITM001,123456,Detergent 1kg,Surf,Cleaning,Laundry,2,120,130,110,PCS,100,PCS,18,Premium detergent,Active,10,500,A,105,With Tax,18
-Product,ITM002,1234567,Dish Wash Gel,Vim,Cleaning,Kitchen,3,75,80,70,PCS,50,PCS,12,Lemon-scented gel,Active,5,200,B,68,With Tax,12
