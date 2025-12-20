@@ -14,14 +14,15 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Session;
 use App\Models\PurchaseInvoice;
+use Illuminate\Support\Facades\Storage;
 class Party extends Controller
 {
-    
-public function vendor_list()
+
+    public function vendor_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         if ($role === 'admin') {
             // Admin can see all vendors
             $vendors = Vendor::all();
@@ -32,7 +33,7 @@ public function vendor_list()
             // For other roles, you might want to restrict access
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
-        
+
         return view('party.vendor_list', compact('vendors'));
     }
 
@@ -40,14 +41,14 @@ public function vendor_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $vendor = Vendor::findOrFail($id);
-        
+
         // Check if manager is trying to modify vendor they didn't add
         if ($role === 'manager' && $vendor->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only modify vendors you added.');
         }
-        
+
         $vendor->status = ($vendor->status == 'Active') ? 'Inactive' : 'Active';
         $vendor->save();
 
@@ -59,57 +60,58 @@ public function vendor_list()
         return view('party.vendor_add');
     }
 
-public function vendor_store(Request $request) {
-    $validated = $request->validate([
-        'vendorname' => 'required|string|max:255',
-        'contact' => 'required|string|max:20',
-        'email' => 'required|email|max:255',
-        'openbalance' => 'nullable|numeric|min:0',
-        'tax' => 'nullable|string',
-        'gst' => 'nullable|string|max:50',
-        'panno' => 'nullable|string|max:50',
-        'creditperiod' => 'required|integer|min:0',
-        'creditlimit' => 'nullable|numeric|min:0',
-        'billaddress' => 'nullable|string',
-        'shipaddress' => 'nullable|string',
-    ]);
+    public function vendor_store(Request $request)
+    {
+        $validated = $request->validate([
+            'vendorname' => 'required|string|max:255',
+            'contact' => 'required|string|max:20',
+            'email' => 'required|email|max:255',
+            'openbalance' => 'nullable|numeric|min:0',
+            'tax' => 'nullable|string',
+            'gst' => 'nullable|string|max:50',
+            'panno' => 'nullable|string|max:50',
+            'creditperiod' => 'required|integer|min:0',
+            'creditlimit' => 'nullable|numeric|min:0',
+            'billaddress' => 'nullable|string',
+            'shipaddress' => 'nullable|string',
+        ]);
 
-    $empcode = Session::get('empcode');
-    $empname = Session::get('empname');
+        $empcode = Session::get('empcode');
+        $empname = Session::get('empname');
 
-    $vendor = Vendor::create([
-        'vendorname' => $request->vendorname,
-        'contact' => $request->contact,
-        'email' => $request->email,
-        'openbalance' => $request->openbalance ?? 0, // Default to 0 if not provided
-        'tax' => $request->tax ?? 'Without Tax', // Default value
-        'topay' => $request->has('topay'),
-        'tocollect' => $request->has('tocollect'),
-        'gst' => $request->gst,
-        'panno' => $request->panno,
-        'creditperiod' => $request->creditperiod ?? 0, // Default to 0 if not provided
-        'creditlimit' => $request->creditlimit ?? 0, // Default to 0 if not provided
-        'billaddress' => $request->billaddress,
-        'shipaddress' => $request->shipaddress,
-        'added_by' => $empcode,
-        'added_by_name' => $empname,
-    ]);
+        $vendor = Vendor::create([
+            'vendorname' => $request->vendorname,
+            'contact' => $request->contact,
+            'email' => $request->email,
+            'openbalance' => $request->openbalance ?? 0, // Default to 0 if not provided
+            'tax' => $request->tax ?? 'Without Tax', // Default value
+            'topay' => $request->has('topay'),
+            'tocollect' => $request->has('tocollect'),
+            'gst' => $request->gst,
+            'panno' => $request->panno,
+            'creditperiod' => $request->creditperiod ?? 0, // Default to 0 if not provided
+            'creditlimit' => $request->creditlimit ?? 0, // Default to 0 if not provided
+            'billaddress' => $request->billaddress,
+            'shipaddress' => $request->shipaddress,
+            'added_by' => $empcode,
+            'added_by_name' => $empname,
+        ]);
 
-    return redirect()->route('party.vendorlist')->with('success', 'Vendor added successfully!');
-}
+        return redirect()->route('party.vendorlist')->with('success', 'Vendor added successfully!');
+    }
 
     public function vendor_edit($id)
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $vendor = Vendor::findOrFail($id);
-        
+
         // Check if manager is trying to edit vendor they didn't add
         if ($role === 'manager' && $vendor->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only edit vendors you added.');
         }
-        
+
         return view('party.vendor_edit', compact('vendor'));
     }
 
@@ -117,159 +119,161 @@ public function vendor_store(Request $request) {
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $vendor = Vendor::findOrFail($id);
-        
+
         // Check if manager is trying to update vendor they didn't add
         if ($role === 'manager' && $vendor->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only update vendors you added.');
         }
-        
+
         $vendor->update($request->all());
 
         return redirect()->route('party.vendorlist')->with('success', 'Vendor updated successfully!');
     }
 
-public function vendor_profile(Request $request, $id)
-{
-    $role = Session::get('role');
-    $empcode = Session::get('empcode');
-    
-    $vendor = Vendor::findOrFail($id);
-    
-    // Check if manager is trying to view vendor they didn't add
-    if ($role === 'manager' && $vendor->added_by !== $empcode) {
-        return redirect()->back()->with('error', 'You can only view vendors you added.');
-    }
-    
-    // Handle date filter from dropdown
-    $range = $request->input('range', '7days'); // default to last 7 days
-    $today = Carbon::today();
-    
-    switch ($range) {
-        case '30days':
-            $from = $today->copy()->subDays(30);
-            break;
-        case 'month':
-            $from = $today->copy()->startOfMonth();
-            break;
-        case '3months':
-            $from = $today->copy()->subMonths(3);
-            break;
-        case '6months':
-            $from = $today->copy()->subMonths(6);
-            break;
-        case '9months':
-            $from = $today->copy()->subMonths(9);
-            break;
-        case '12months':
-            $from = $today->copy()->subMonths(12);
-            break;
-        case '18months':
-            $from = $today->copy()->subMonths(18);
-            break;
-        case '1year':
-            $from = $today->copy()->subYear();
-            break;
-        case '2years':
-            $from = $today->copy()->subYears(2);
-            break;
-        default: // '7days'
-            $from = $today->copy()->subDays(7);
-            break;
-    }
+    public function vendor_profile(Request $request, $id)
+    {
+        $role = Session::get('role');
+        $empcode = Session::get('empcode');
 
-    $to = $today;
-    
-    // Initialize transactions array
-    $transactions = collect();
-    
-    // Add opening balance as first transaction (if exists)
-    if ($vendor->openbalance && $vendor->openbalance > 0) {
-        $transactions->push([
-            'date' => $from->format('Y-m-d'), // Show at start of period
-            'voucher' => 'Opening Balance',
-            'credit' => $vendor->openbalance, // Pending amount
-            'debit' => null, // Paid amount
-            'balance' => $vendor->openbalance,
-            'sort_order' => 0 // To ensure it appears first
-        ]);
-    }
-    
-    // Get Purchase Invoices in date range (instead of Purchase Orders)
-    $purchaseInvoices = PurchaseInvoice::with(['purchaseInvoiceItems.itemDetails'])
-        ->where('contact', $vendor->contact)
-        ->whereBetween('bill_date', [$from, $to])
-        ->orderBy('bill_date')
-        ->get();
-    
-    $runningBalance = $vendor->openbalance ?? 0;
-    
-    // Process Purchase Invoices - create two transactions for each invoice
-    foreach ($purchaseInvoices as $invoice) {
-        // First transaction: Total amount (Pending)
-        $runningBalance += $invoice->total;
-        $transactions->push([
-            'date' => $invoice->bill_date,
-            'voucher' => 'Purchase Invoice - ' . $invoice->bill_no,
-            'credit' => $invoice->total, // Total amount in pending
-            'debit' => null,
-            'balance' => $runningBalance,
-            'sort_order' => 1
-        ]);
-        
-        // Second transaction: Paid amount (if any)
-        if ($invoice->paid_amount && $invoice->paid_amount > 0) {
-            $runningBalance -= $invoice->paid_amount;
+        $vendor = Vendor::findOrFail($id);
+
+        // Check if manager is trying to view vendor they didn't add
+        if ($role === 'manager' && $vendor->added_by !== $empcode) {
+            return redirect()->back()->with('error', 'You can only view vendors you added.');
+        }
+
+        // Handle date filter from dropdown
+        $range = $request->input('range', '7days'); // default to last 7 days
+        $today = Carbon::today();
+
+        switch ($range) {
+            case '30days':
+                $from = $today->copy()->subDays(30);
+                break;
+            case 'month':
+                $from = $today->copy()->startOfMonth();
+                break;
+            case '3months':
+                $from = $today->copy()->subMonths(3);
+                break;
+            case '6months':
+                $from = $today->copy()->subMonths(6);
+                break;
+            case '9months':
+                $from = $today->copy()->subMonths(9);
+                break;
+            case '12months':
+                $from = $today->copy()->subMonths(12);
+                break;
+            case '18months':
+                $from = $today->copy()->subMonths(18);
+                break;
+            case '1year':
+                $from = $today->copy()->subYear();
+                break;
+            case '2years':
+                $from = $today->copy()->subYears(2);
+                break;
+            default: // '7days'
+                $from = $today->copy()->subDays(7);
+                break;
+        }
+
+        $to = $today;
+
+        // Initialize transactions array
+        $transactions = collect();
+
+        // Add opening balance as first transaction (if exists)
+        if ($vendor->openbalance && $vendor->openbalance > 0) {
             $transactions->push([
-                'date' => $invoice->bill_date,
-                'voucher' => 'Payment for Invoice - ' . $invoice->bill_no,
-                'credit' => null,
-                'debit' => $invoice->paid_amount, // Paid amount
-                'balance' => $runningBalance,
-                'sort_order' => 2
+                'date' => $from->format('Y-m-d'), // Show at start of period
+                'voucher' => 'Opening Balance',
+                'credit' => $vendor->openbalance, // Pending amount
+                'debit' => null, // Paid amount
+                'balance' => $vendor->openbalance,
+                'sort_order' => 0 // To ensure it appears first
             ]);
         }
+
+        // Get Purchase Invoices in date range (instead of Purchase Orders)
+        $purchaseInvoices = PurchaseInvoice::with(['purchaseInvoiceItems.itemDetails'])
+            ->where('contact', $vendor->contact)
+            ->whereBetween('bill_date', [$from, $to])
+            ->orderBy('bill_date')
+            ->get();
+
+        $runningBalance = $vendor->openbalance ?? 0;
+
+        // Process Purchase Invoices - create two transactions for each invoice
+        foreach ($purchaseInvoices as $invoice) {
+            // First transaction: Total amount (Pending)
+            $runningBalance += $invoice->total;
+            $transactions->push([
+                'date' => $invoice->bill_date,
+                'voucher' => 'Purchase Invoice - ' . $invoice->bill_no,
+                'credit' => $invoice->total, // Total amount in pending
+                'debit' => null,
+                'balance' => $runningBalance,
+                'sort_order' => 1
+            ]);
+
+            // Second transaction: Paid amount (if any)
+            if ($invoice->paid_amount && $invoice->paid_amount > 0) {
+                $runningBalance -= $invoice->paid_amount;
+                $transactions->push([
+                    'date' => $invoice->bill_date,
+                    'voucher' => 'Payment for Invoice - ' . $invoice->bill_no,
+                    'credit' => null,
+                    'debit' => $invoice->paid_amount, // Paid amount
+                    'balance' => $runningBalance,
+                    'sort_order' => 2
+                ]);
+            }
+        }
+
+        // Get separate payments in date range
+        $payments = Payment::where('vendor_id', $id)
+            ->whereBetween('payment_date', [$from, $to])
+            ->orderBy('payment_date')
+            ->get();
+
+        // Process separate payments
+        foreach ($payments as $payment) {
+            $runningBalance -= $payment->payment_amount;
+            $transactions->push([
+                'date' => $payment->payment_date,
+                'voucher' => 'Payment - ' . ($payment->purchaseInvoice->bill_no ?? 'Direct'),
+                'credit' => null,
+                'debit' => $payment->payment_amount,
+                'balance' => $runningBalance,
+                'sort_order' => 3
+            ]);
+        }
+
+        // Sort transactions by date DESC, then by sort_order DESC (bottom to top - most recent first)
+        $transactions = $transactions->sortBy([
+            ['date', 'desc'],
+            ['sort_order', 'desc']
+        ])->values();
+
+        // Get the last balance amount (final balance)
+        $lastBalance = $transactions->isNotEmpty() ? $transactions->first()['balance'] : ($vendor->openbalance ?? 0);
+
+        return view('party.vendor_profile', compact(
+            'vendor',
+            'purchaseInvoices',
+            'transactions',
+            'lastBalance',
+            'range',
+            'from',
+            'to'
+        ));
     }
-    
-    // Get separate payments in date range
-    $payments = Payment::where('vendor_id', $id)
-        ->whereBetween('payment_date', [$from, $to])
-        ->orderBy('payment_date')
-        ->get();
-    
-    // Process separate payments
-    foreach ($payments as $payment) {
-        $runningBalance -= $payment->payment_amount;
-        $transactions->push([
-            'date' => $payment->payment_date,
-            'voucher' => 'Payment - ' . ($payment->purchaseInvoice->bill_no ?? 'Direct'),
-            'credit' => null,
-            'debit' => $payment->payment_amount,
-            'balance' => $runningBalance,
-            'sort_order' => 3
-        ]);
-    }
-    
-    // Sort transactions by date DESC, then by sort_order DESC (bottom to top - most recent first)
-    $transactions = $transactions->sortBy([
-        ['date', 'desc'],
-        ['sort_order', 'desc']
-    ])->values();
-    
-    // Get the last balance amount (final balance)
-    $lastBalance = $transactions->isNotEmpty() ? $transactions->first()['balance'] : ($vendor->openbalance ?? 0);
-    
-    return view('party.vendor_profile', compact(
-        'vendor',
-        'purchaseInvoices',
-        'transactions',
-        'lastBalance',
-        'range',
-        'from',
-        'to'
-    ));
-}
+
+
 
     public function vendor_bulk_upload(Request $request)
     {
@@ -279,17 +283,23 @@ public function vendor_profile(Request $request, $id)
 
         $empcode = Session::get('empcode');
         $empname = Session::get('empname');
-        
+
         $file = $request->file('csv_file');
+
+        // 1️⃣ Store file in S3
+        $path = $file->store('vendor_uploads', 's3'); // 'vendor_uploads' is the folder in your bucket
+        $s3Url = Storage::disk('s3')->url($path);     // Public URL if bucket allows
+
+        // 2️⃣ Read CSV content
         $csvData = file_get_contents($file);
         $rows = array_map('str_getcsv', explode("\n", $csvData));
-        
+
         // Remove header row
         $header = array_shift($rows);
-        
+
         $successCount = 0;
         $errorCount = 0;
-        
+
         foreach ($rows as $row) {
             if (count($row) >= 13) { // Ensure we have enough columns
                 try {
@@ -307,8 +317,9 @@ public function vendor_profile(Request $request, $id)
                         'creditlimit' => $row[10],
                         'billaddress' => $row[11],
                         'shipaddress' => $row[12],
-                        'added_by' => $empcode, // Track who uploaded this vendor
+                        'added_by' => $empcode,
                         'added_by_name' => $empname,
+                        'file_url' => $s3Url, // Optional: store file URL in DB
                     ]);
                     $successCount++;
                 } catch (\Exception $e) {
@@ -316,18 +327,18 @@ public function vendor_profile(Request $request, $id)
                 }
             }
         }
-        
-        $message = "Bulk upload completed. Success: {$successCount}, Errors: {$errorCount}";
+
+        $message = "Bulk upload completed. Success: {$successCount}, Errors: {$errorCount}. CSV stored at: {$s3Url}";
         return redirect()->route('party.vendorlist')->with('success', $message);
     }
 
 
 
-public function customer_list()
+    public function customer_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         if ($role === 'admin') {
             // Admin can see all customers
             $customers = Customer::all();
@@ -338,7 +349,7 @@ public function customer_list()
             // For other roles, you might want to restrict access
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
-        
+
         return view('party.customer_list', compact('customers'));
     }
 
@@ -370,14 +381,14 @@ public function customer_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $customer = Customer::findOrFail($id);
-        
+
         // Check if manager is trying to modify customer they didn't add
         if ($role === 'manager' && $customer->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only modify customers you added.');
         }
-        
+
         $customer->status = ($customer->status == 'Active') ? 'Inactive' : 'Active';
         $customer->save();
 
@@ -393,14 +404,14 @@ public function customer_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $customer = Customer::findOrFail($id);
-        
+
         // Check if manager is trying to edit customer they didn't add
         if ($role === 'manager' && $customer->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only edit customers you added.');
         }
-        
+
         return view('party.customer_edit', compact('customer'));
     }
 
@@ -408,9 +419,9 @@ public function customer_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $customer = Customer::findOrFail($id);
-        
+
         // Check if manager is trying to update customer they didn't add
         if ($role === 'manager' && $customer->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only update customers you added.');
@@ -434,14 +445,14 @@ public function customer_list()
     {
         $role = Session::get('role');
         $empcode = Session::get('empcode');
-        
+
         $customer = Customer::findOrFail($id);
-        
+
         // Check if manager is trying to view customer they didn't add
         if ($role === 'manager' && $customer->added_by !== $empcode) {
             return redirect()->back()->with('error', 'You can only view customers you added.');
         }
-        
+
         // Get sales invoices - also filter by role if needed
         if ($role === 'admin') {
             $sales = SalesInvoice::where('customer_id', $id)->get();
@@ -449,9 +460,9 @@ public function customer_list()
             // Only show sales created by this manager or their store
             $store_id = Session::get('store_id');
             $sales = SalesInvoice::where('customer_id', $id)
-                ->where(function($query) use ($empcode, $store_id) {
+                ->where(function ($query) use ($empcode, $store_id) {
                     $query->where('created_by', $empcode)
-                          ->orWhere('store_id', $store_id);
+                        ->orWhere('store_id', $store_id);
                 })
                 ->get();
         } else {
@@ -469,17 +480,17 @@ public function customer_list()
 
         $empcode = Session::get('empcode');
         $empname = Session::get('empname');
-        
+
         $file = $request->file('csv_file');
         $csvData = file_get_contents($file);
         $rows = array_map('str_getcsv', explode("\n", $csvData));
-        
+
         // Remove header row
         $header = array_shift($rows);
-        
+
         $successCount = 0;
         $errorCount = 0;
-        
+
         foreach ($rows as $row) {
             if (count($row) >= 6) { // Ensure we have enough columns
                 try {
@@ -506,7 +517,7 @@ public function customer_list()
                 }
             }
         }
-        
+
         $message = "Bulk upload completed. Success: {$successCount}, Errors/Duplicates: {$errorCount}";
         return redirect()->route('party.customerlist')->with('success', $message);
     }
@@ -516,73 +527,73 @@ public function customer_list()
         $role = Session::get('role');
         $empcode = Session::get('empcode');
         $searchTerm = $request->get('search');
-        
+
         $query = Customer::query();
-        
+
         if ($role === 'manager') {
             $query->where('added_by', $empcode);
         }
-        
+
         if ($searchTerm) {
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('contact', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('city', 'LIKE', "%{$searchTerm}%");
+                    ->orWhere('contact', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('city', 'LIKE', "%{$searchTerm}%");
             });
         }
-        
+
         $customers = $query->get();
-        
+
         return view('party.customer_list', compact('customers'));
     }
 
-      public function enquiry_list()
-{
-    $enquiries = Enquiry::with('store')->latest()->get();
-    $stores = Store::all();
-    return view('enquiry.list', compact('enquiries', 'stores'));
-}
+    public function enquiry_list()
+    {
+        $enquiries = Enquiry::with('store')->latest()->get();
+        $stores = Store::all();
+        return view('enquiry.list', compact('enquiries', 'stores'));
+    }
 
-public function store_enquiry(Request $request)
-{
-    $request->validate([
-        'enquiry_no' => 'required',
-        'customer_name' => 'required',
-        'contact_number' => 'required',
-        'item_name' => 'required',
-        'store_id' => 'required|exists:stores,id',
-    ]);
+    public function store_enquiry(Request $request)
+    {
+        $request->validate([
+            'enquiry_no' => 'required',
+            'customer_name' => 'required',
+            'contact_number' => 'required',
+            'item_name' => 'required',
+            'store_id' => 'required|exists:stores,id',
+        ]);
 
-    Enquiry::create($request->all());
+        Enquiry::create($request->all());
 
-    return redirect()->route('enquiry.list')->with('success', 'Enquiry added successfully');
-}
-public function update_enquiry(Request $request, $id)
-{
-    $request->validate([
-        'enquiry_no' => 'required',
-        'customer_name' => 'required',
-        'contact_number' => 'required',
-        'item_name' => 'required',
-        'store_id' => 'required|exists:stores,id',
-    ]);
+        return redirect()->route('enquiry.list')->with('success', 'Enquiry added successfully');
+    }
+    public function update_enquiry(Request $request, $id)
+    {
+        $request->validate([
+            'enquiry_no' => 'required',
+            'customer_name' => 'required',
+            'contact_number' => 'required',
+            'item_name' => 'required',
+            'store_id' => 'required|exists:stores,id',
+        ]);
 
-    $enquiry = Enquiry::findOrFail($id);
-    $enquiry->update($request->all());
+        $enquiry = Enquiry::findOrFail($id);
+        $enquiry->update($request->all());
 
-    return redirect()->route('enquiry.list')->with('success', 'Enquiry updated successfully');
-}
-public function update_status(Request $request, $id)
-{
-    $request->validate([
-        'status' => 'required|string|max:255'
-    ]);
+        return redirect()->route('enquiry.list')->with('success', 'Enquiry updated successfully');
+    }
+    public function update_status(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|max:255'
+        ]);
 
-    $enquiry = Enquiry::findOrFail($id);
-    $enquiry->update(['status' => $request->status]);
+        $enquiry = Enquiry::findOrFail($id);
+        $enquiry->update(['status' => $request->status]);
 
-    return redirect()->route('enquiry.list')->with('success', 'Enquiry status updated successfully');
-}
+        return redirect()->route('enquiry.list')->with('success', 'Enquiry status updated successfully');
+    }
 
 
 
