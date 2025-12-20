@@ -1,0 +1,21 @@
+.row .col-md-6 {
+    border: 1px solid var(--border);
+}
+
+ul li {
+    width: 100%;
+    background-color: var(--secondary);
+    transition: background-color 0.3s;
+}
+
+ul li:hover {
+    background-color: var(--tertiary);
+}
+
+ul li a {
+    color: var(--text-secondary);
+    font-weight: var(--fw-sm);
+    font-size: 14px;
+    text-decoration: none;
+    width: 100%;
+}

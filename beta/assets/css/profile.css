@@ -1,0 +1,152 @@
+.accordion-body::-webkit-scrollbar,
+.leftcard::-webkit-scrollbar,
+.center-timeline::-webkit-scrollbar {
+    display: none;
+}
+
+.center-timeline {
+    height: 70vh;
+    overflow: hidden scroll;
+}
+
+.mainbdy {
+    margin-top: 10px;
+}
+
+.row {
+    --bs-gutter-x: 0rem;
+}
+
+.contentleft {
+    height: 100%;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+}
+
+.contentright .maincard {
+    height: 100%;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    border-radius: 5px;
+}
+
+.cards .cardhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.cards .cardhead h5 {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: var(--fw-xl);
+    text-decoration: 1.5px underline solid var(--input-border);
+    margin-bottom: 0px;
+}
+
+.cards .profile-head {
+    display: grid;
+    grid-template-columns: 30% 65%;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.profile-head img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.leftcard {
+    height: 60vh;
+    overflow: hidden scroll;
+}
+
+.leftcard .col-sm-12 {
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+}
+
+.cards h6 {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: var(--fw-sm);
+    text-transform: capitalize;
+}
+
+.cards h5 {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: var(--fw-md);
+    text-transform: capitalize;
+}
+
+.cardicons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+/* Tabs */
+.nav-tabs {
+    border: none;
+}
+
+.tab-content {
+    margin-top: 10px;
+}
+
+.proftabs {
+    margin-top: 10px;
+}
+
+@media screen and (min-width: 1140px) {
+
+    .mainbdy {
+        display: grid;
+        grid-template-columns: 25% 74%;
+        justify-content: space-between;
+        align-items: start;
+    }
+
+    .maincard {
+        padding: 15px;
+    }
+
+}
+
+@media screen and (min-width: 767px) and (max-width: 1140px) {
+
+    .mainbdy {
+        display: grid;
+        grid-template-columns: 27% 72%;
+        justify-content: space-between;
+        align-items: start;
+    }
+
+    .maincard {
+        padding: 10px;
+    }
+
+    .profile-head img {
+        height: 60px;
+    }
+
+}
+
+@media screen and (max-width: 767px) {
+
+    .mainbdy {
+        display: block;
+    }
+
+    .maincard {
+        padding: 10px;
+    }
+
+}

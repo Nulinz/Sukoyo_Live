@@ -1,0 +1,27 @@
+.select2-container .select2-selection--single {
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
+    height: auto;
+}
+
+.select2-container--default .select2-selection--single {
+    background-color: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+}
+
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+    background-color: #5897fb;
+    color: var(--secondary);
+}
+
+.select2-results__option {
+    font-size: 12px;
+    font-weight: var(--fw-md);
+    padding: 5px;
+}
+
+.select2-selection__clear {
+    display: none;
+}

@@ -1,0 +1,130 @@
+html,
+body {
+    /* background: #2C3E50; */
+    background: url('../images/login_bg.png') center center no-repeat;
+    background-size: cover;
+    position: relative;
+    min-height: 100vh;
+    font-family: 'Outfit', sans-serif;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-ms-clear {
+    display: none;
+}
+
+.main-body {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.signup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    transition: all 1s ease;
+}
+
+.form-div {
+    background: url('../images/login_form.png') center center no-repeat;
+    background-size: cover;
+    border-radius: 10px;
+    margin: 50px auto 0px auto;
+    padding: 30px 30px 75px 30px;
+}
+
+.form-div h3 {
+    color: var(--secondary);
+    font-size: 35px;
+    font-weight: var(--fw-xl);
+}
+
+.form-div form {
+    margin-top: 50px;
+}
+
+form label {
+    color: var(--secondary);
+    font-size: 15px;
+    font-weight: var(--fw-sm);
+    margin-bottom: 5px;
+}
+
+form .form-control:focus {
+    outline: none !important;
+    border: 1px solid var(--secondary);
+    box-shadow: none !important;
+}
+
+form .form-control,
+form .form-control:focus {
+    background-color: transparent;
+    color: var(--secondary);
+    border: 1px solid #ffffff0f;
+    font-size: 18px;
+    font-weight: var(--fw-md);
+    border-radius: 6px;
+}
+
+.loginbtn {
+    background-color: #deec29;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: var(--fw-sm);
+    border: none;
+    border-radius: 5px;
+    padding: .375rem .75rem;
+    width: 50%;
+    margin: auto;
+}
+
+.loginbtn:hover {
+    background-color: #d1e000;
+}
+
+.inpflex {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 12% 70% 15%;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff14;
+    border: 1px solid #ffffff0f;
+    border-radius: 6px;
+}
+
+.inpflex input {
+    /* width: 85%; */
+    border-radius: 6px 0px 0px 6px;
+}
+
+.inpflex i {
+    /* width: 15%; */
+    color: var(--secondary);
+    text-align: center;
+}
+
+@media screen and (min-width: 990px) {
+    .form-div {
+        width: 80%;
+    }
+}
+
+@media screen and (max-width: 990px) {
+    .form-div {
+        width: 100%;
+    }
+}

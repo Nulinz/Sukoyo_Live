@@ -1,0 +1,119 @@
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-ms-clear {
+    display: none;
+}
+
+form hr {
+    margin: 1rem 0;
+    color: var(--border);
+    border: 0;
+    border-top: var(--bs-border-width) solid;
+    opacity: 0.75;
+}
+
+.form-div .body-head h4 {
+    color: var(--text-primary);
+    font-weight: var(--fw-lg);
+    margin-bottom: 5px !important;
+}
+
+.form-div {
+    padding: 10px 0px;
+}
+
+.form-div label {
+    color: var(--text-secondary);
+    font-weight: var(--fw-sm);
+    margin-bottom: 5px;
+}
+
+.form-div .form-control,
+.form-div .form-select {
+    background-color: var(--bg) !important;
+    color: var(--text-primary);
+    font-weight: var(--fw-md);
+    border: 1px solid var(--border);
+    outline: none !important;
+}
+
+.form-div .form-control:focus,
+.form-div .form-select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: 1px solid var(--border);
+}
+
+.inpflex,
+.inpselectflex {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.inpflex input,
+.inpselectflex input {
+    border-right: 1px solid var(--border) !important;
+    border-radius: 6px 0px 0px 6px;
+}
+
+.inpflex input {
+    width: 85%;
+}
+
+.inpselectflex input {
+    width: 65%;
+}
+
+.inpselectflex select,
+.inpselectflex h6 {
+    width: 35%;
+    text-align: left;
+    background-color: var(--secondary) !important;
+    font-size: 12px !important;
+    padding: 2px 2px 2px 8px;
+}
+
+.inpflex i {
+    width: 15%;
+    text-align: center;
+}
+
+.barcodeimg {
+    background-color: var(--secondary);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+@media screen and (min-width: 1140px) {
+
+    .form-div label,
+    .form-div input,
+    .form-div select,
+    .form-div textarea {
+        font-size: 14px;
+    }
+
+}
+
+@media screen and (max-width: 1140px) {
+
+    .form-div label,
+    .form-div input,
+    .form-div select,
+    .form-div textarea {
+        font-size: 12px;
+    }
+
+}
