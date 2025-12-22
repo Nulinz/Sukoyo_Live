@@ -1445,6 +1445,9 @@ public function subcategory_bulk_upload(Request $request)
                 'error' => $e->getMessage()
             ]);
         }
+        return redirect()
+        ->back()
+        ->with('success', 'Items uploaded successfully!');
     }
 
         // 5️⃣ Response
