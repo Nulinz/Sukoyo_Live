@@ -203,7 +203,7 @@
                     class="d-inline-flex text-decoration-none rounded">Overstocked</a>
             </li>
             <li>
-                <a href="{{ route('stock.zeromovement') }}" class="d-inline-flex text-decoration-none rounded">Zero
+                <a href="{{ route('stock.zeromovement.page') }}" class="d-inline-flex text-decoration-none rounded">Zero
                     Movement</a>
             </li>
         </ul>

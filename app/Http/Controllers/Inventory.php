@@ -47,46 +47,35 @@ class Inventory extends Controller
 
         $file = $request->file('file');
 
-        /* -----------------------------------------
-           1️⃣ Read file locally (WORKING LOGIC)
-        ------------------------------------------*/
+        // Read file locally
         $data = array_map('str_getcsv', file($file->getRealPath()));
+        unset($data[0]); // Remove header
 
-        // Remove header row
-        unset($data[0]);
-
-        /* -----------------------------------------
-           2️⃣ Upload file to S3 (storage purpose)
-        ------------------------------------------*/
+        // Wrap S3 + DB insertion in try-catch
         try {
+            DB::beginTransaction(); // Start DB transaction
+
+            // Upload to S3
             $fileName = 'brands_' . time() . '_' . $file->getClientOriginalName();
+            Storage::disk('s3')->putFileAs('brand_bulk_uploads', $file, $fileName);
 
-            Storage::disk('s3')->putFileAs(
-                'brand_bulk_uploads',
-                $file,
-                $fileName
-            );
+            // Insert into DB
+            foreach ($data as $row) {
+                Brand::create([
+                    'name' => $row[0] ?? 'Unnamed',
+                    'remarks' => $row[1] ?? '',
+                    'status' => 'Active',
+                    'created_by' => session('role') === 'manager' ? session('loginId') : null,
+                ]);
+            }
+
+            DB::commit(); // Commit if everything went fine
         } catch (\Exception $e) {
-            return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
+            DB::rollBack(); // Rollback DB inserts if S3 upload or DB insert fails
+            return back()->with('error', 'Upload Failed: ' . $e->getMessage());
         }
 
-        /* -----------------------------------------
-           3️⃣ Insert into DB (unchanged)
-        ------------------------------------------*/
-        foreach ($data as $row) {
-            Brand::create([
-                'name' => $row[0] ?? 'Unnamed',
-                'remarks' => $row[1] ?? '',
-                'status' => 'Active',
-                'created_by' => session('role') === 'manager'
-                    ? session('loginId')
-                    : null,
-            ]);
-        }
-
-        return redirect()
-            ->back()
-            ->with('success', 'Brands uploaded successfully!');
+        return redirect()->back()->with('success', 'Brands uploaded successfully!');
     }
     public function store_brand(Request $request)
     {
@@ -1286,6 +1275,7 @@ class Inventory extends Controller
     }
     public function item_bulk_upload(Request $request)
     {
+        // 1️⃣ Validate the uploaded file
         $request->validate([
             'file' => 'required|mimes:csv,xlsx,xls|max:2048'
         ]);
@@ -1293,9 +1283,7 @@ class Inventory extends Controller
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension());
 
-        /* -----------------------------------------
-           1️⃣ Read file locally (CSV / Excel)
-        ------------------------------------------*/
+        // 2️⃣ Read CSV / Excel
         if ($extension === 'csv') {
             $data = array_map('str_getcsv', file($file->getRealPath()));
         } else {
@@ -1303,12 +1291,11 @@ class Inventory extends Controller
             $data = $spreadsheet->getActiveSheet()->toArray();
         }
 
-        // Remove header row
+        // Remove header row and reset indexes
         unset($data[0]);
+        $data = array_values($data);
 
-        /* -----------------------------------------
-           2️⃣ Upload file to S3 (storage only)
-        ------------------------------------------*/
+        // 3️⃣ Upload file to S3 (optional)
         try {
             $fileName = 'items_' . time() . '_' . $file->getClientOriginalName();
 
@@ -1321,37 +1308,28 @@ class Inventory extends Controller
             return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
         }
 
-        /* -----------------------------------------
-           3️⃣ Process data
-        ------------------------------------------*/
+        // 4️⃣ Process data
         $successCount = 0;
         $errorCount = 0;
         $errors = [];
 
         foreach ($data as $rowIndex => $row) {
             try {
-                // Skip empty rows
                 if (empty(array_filter($row))) {
-                    continue;
+                    continue; // skip empty rows
                 }
 
-                $getValue = function ($index, $default = '') use ($row) {
-                    return isset($row[$index]) && trim($row[$index]) !== ''
-                        ? trim($row[$index])
-                        : $default;
-                };
+                $getValue = fn($index, $default = '') => isset($row[$index]) && trim($row[$index]) !== '' ? trim($row[$index]) : $default;
+                $numericValue = fn($index, $default = 0) => is_numeric($getValue($index, $default)) ? (float) $getValue($index, $default) : $default;
 
+                // Check mandatory field
                 if (empty($getValue(3))) {
                     $errors[] = "Row " . ($rowIndex + 1) . ": Item name is required";
                     $errorCount++;
                     continue;
                 }
 
-                $numericValue = function ($index, $default = 0) use ($getValue) {
-                    $value = $getValue($index, $default);
-                    return is_numeric($value) ? (float) $value : $default;
-                };
-
+                // Create or get brand, category, subcategory
                 $brand = Brand::firstOrCreate(
                     ['name' => $getValue(4, 'Default')],
                     ['status' => 'Active']
@@ -1370,31 +1348,34 @@ class Inventory extends Controller
                     ['status' => 'Active']
                 );
 
-                Item::create([
-                    'item_type' => $getValue(0, 'Product'),
-                    'item_code' => $getValue(1),
-                    'hsn_code' => $getValue(2),
-                    'item_name' => $getValue(3),
-                    'brand_id' => $brand->id,
-                    'category_id' => $category->id,
-                    'subcategory_id' => $subcategory->id,
-                    'discount' => $numericValue(7),
-                    'sales_price' => $numericValue(8),
-                    'mrp' => $numericValue(9),
-                    'wholesale_price' => $numericValue(10),
-                    'measure_unit' => $getValue(11, 'PCS'),
-                    'opening_stock' => $numericValue(12),
-                    'opening_unit' => $getValue(13, 'PCS'),
-                    'gst_rate' => $numericValue(14),
-                    'item_description' => $getValue(15),
-                    'stock_status' => $getValue(16, 'Active'),
-                    'min_stock' => $numericValue(17),
-                    'max_stock' => $numericValue(18),
-                    'abc_category' => $getValue(19, 'C'),
-                    'purchase_price' => $numericValue(20),
-                    'purchase_tax' => $getValue(21, 'With Tax'),
-                    'purchase_gst' => $numericValue(22),
-                ]);
+                // Insert or update Item
+                Item::updateOrCreate(
+                    ['item_code' => $getValue(1)], // unique field
+                    [
+                        'item_type' => $getValue(0, 'Product'),
+                        'hsn_code' => $getValue(2),
+                        'item_name' => $getValue(3),
+                        'brand_id' => $brand->id,
+                        'category_id' => $category->id,
+                        'subcategory_id' => $subcategory->id,
+                        'discount' => $numericValue(7),
+                        'sales_price' => $numericValue(8),
+                        'mrp' => $numericValue(9),
+                        'wholesale_price' => $numericValue(10),
+                        'measure_unit' => $getValue(11, 'PCS'),
+                        'opening_stock' => $numericValue(12),
+                        'opening_unit' => $getValue(13, 'PCS'),
+                        'gst_rate' => $numericValue(14),
+                        'item_description' => $getValue(15),
+                        'stock_status' => $getValue(16, 'Active'),
+                        'min_stock' => $numericValue(17),
+                        'max_stock' => $numericValue(18),
+                        'abc_category' => $getValue(19, 'C'),
+                        'purchase_price' => $numericValue(20),
+                        'purchase_tax' => $getValue(21, 'With Tax'),
+                        'purchase_gst' => $numericValue(22),
+                    ]
+                );
 
                 $successCount++;
 
@@ -1405,15 +1386,20 @@ class Inventory extends Controller
             }
         }
 
-        /* -----------------------------------------
-           4️⃣ Response
-        ------------------------------------------*/
+        // 5️⃣ Response
         $message = "Upload complete! Successfully imported: {$successCount} items.";
-
         if ($errorCount > 0) {
             $message .= " Failed: {$errorCount} items.";
         }
+
+        return redirect()
+            ->back()
+            ->with([
+                'success' => $message,
+                'errors_list' => $errors
+            ]);
     }
+
 
     public function item_profile($id)
     {
