@@ -39,44 +39,71 @@ class Inventory extends Controller
         return view('inventory.brand_list', compact('brands'));
     }
 
-    public function brand_bulk_upload(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:csv,xlsx,xls|max:2048'
-        ]);
+public function brand_bulk_upload(Request $request)
+{
+    /* -----------------------------------------
+       1️⃣ Validate upload
+    ------------------------------------------*/
+    $request->validate([
+        'file' => 'required|mimes:csv,xlsx,xls|max:2048'
+    ]);
 
-        $file = $request->file('file');
+    $file = $request->file('file');
 
-        // Read file locally
-        $data = array_map('str_getcsv', file($file->getRealPath()));
-        unset($data[0]); // Remove header
+    /* -----------------------------------------
+       2️⃣ Read file locally (CSV only logic)
+    ------------------------------------------*/
+    $data = array_map('str_getcsv', file($file->getRealPath()));
 
-        // Wrap S3 + DB insertion in try-catch
-        try {
-            DB::beginTransaction(); // Start DB transaction
+    // Remove header
+    unset($data[0]);
 
-            // Upload to S3
-            $fileName = 'brands_' . time() . '_' . $file->getClientOriginalName();
-            Storage::disk('s3')->putFileAs('brand_bulk_uploads', $file, $fileName);
+    /* -----------------------------------------
+       3️⃣ Upload file to S3 (NO url() calls)
+    ------------------------------------------*/
+    $s3Path = null;
 
-            // Insert into DB
-            foreach ($data as $row) {
-                Brand::create([
-                    'name' => $row[0] ?? 'Unnamed',
-                    'remarks' => $row[1] ?? '',
-                    'status' => 'Active',
-                    'created_by' => session('role') === 'manager' ? session('loginId') : null,
-                ]);
-            }
+    try {
+        $fileName = 'brands_' . time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
 
-            DB::commit(); // Commit if everything went fine
-        } catch (\Exception $e) {
-            DB::rollBack(); // Rollback DB inserts if S3 upload or DB insert fails
-            return back()->with('error', 'Upload Failed: ' . $e->getMessage());
+        // Full S3 key (IMPORTANT)
+        $s3Path = 'brand_bulk_uploads/' . $fileName;
+
+        Storage::disk('s3')->putFileAs(
+            'brand_bulk_uploads',
+            $file,
+            $fileName
+        );
+    } catch (\Exception $e) {
+        return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
+    }
+
+    /* -----------------------------------------
+       4️⃣ Insert rows into DB
+    ------------------------------------------*/
+    foreach ($data as $row) {
+        if (empty($row[0])) {
+            continue; // skip empty rows
         }
 
-        return redirect()->back()->with('success', 'Brands uploaded successfully!');
+        Brand::create([
+            'name'       => trim($row[0]),
+            'remarks'    => $row[1] ?? '',
+            'status'     => 'Active',
+            'created_by' => session('role') === 'manager'
+                ? session('loginId')
+                : null,
+
+            // OPTIONAL: store uploaded file path
+            // 'upload_file' => $s3Path,
+        ]);
     }
+
+    return redirect()
+        ->back()
+        ->with('success', 'Brands uploaded successfully!');
+}
+
     public function store_brand(Request $request)
     {
         $request->validate([
@@ -135,59 +162,75 @@ class Inventory extends Controller
         return view('inventory.category_list', compact('categories'));
     }
 
-    public function category_bulk_upload(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:csv,xlsx,xls|max:2048'
-        ]);
 
-        $file = $request->file('file');
 
-        /* -----------------------------------------
-           1️⃣ Read file locally (existing working logic)
-        ------------------------------------------*/
-        $rows = array_map('str_getcsv', file($file->getRealPath()));
+public function category_bulk_upload(Request $request)
+{
+    /* -----------------------------------------
+       1️⃣ Validate upload
+    ------------------------------------------*/
+    $request->validate([
+        'file' => 'required|mimes:csv,xlsx,xls|max:2048'
+    ]);
 
-        // Remove header row
-        unset($rows[0]);
+    $file = $request->file('file');
 
-        /* -----------------------------------------
-           2️⃣ Upload file to S3 (storage only)
-        ------------------------------------------*/
-        try {
-            $fileName = 'categories_' . time() . '_' . $file->getClientOriginalName();
+    /* -----------------------------------------
+       2️⃣ Read file locally (CSV logic)
+    ------------------------------------------*/
+    $rows = array_map('str_getcsv', file($file->getRealPath()));
 
-            Storage::disk('s3')->putFileAs(
-                'category_bulk_uploads',
-                $file,
-                $fileName
-            );
-        } catch (\Exception $e) {
-            return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
-        }
+    // Remove header
+    unset($rows[0]);
 
-        $createdBy = session('role') === 'manager'
-            ? session('loginId')
-            : null;
+    /* -----------------------------------------
+       3️⃣ Upload file to S3 (storage only – SAFE)
+    ------------------------------------------*/
+    $s3Path = null;
 
-        /* -----------------------------------------
-           3️⃣ Insert into DB (unchanged logic)
-        ------------------------------------------*/
-        foreach ($rows as $row) {
-            if (!empty($row[0])) {
-                Category::create([
-                    'name' => trim($row[0]),
-                    'remarks' => $row[1] ?? '',
-                    'status' => 'Active',
-                    'created_by' => $createdBy,
-                ]);
-            }
-        }
+    try {
+        $fileName = 'categories_' . time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
 
-        return redirect()
-            ->back()
-            ->with('success', 'Categories uploaded successfully!');
+        // Full S3 key (important)
+        $s3Path = 'category_bulk_uploads/' . $fileName;
+
+        Storage::disk('s3')->putFileAs(
+            'category_bulk_uploads',
+            $file,
+            $fileName
+        );
+    } catch (\Exception $e) {
+        return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
     }
+
+    $createdBy = session('role') === 'manager'
+        ? session('loginId')
+        : null;
+
+    /* -----------------------------------------
+       4️⃣ Insert into DB
+    ------------------------------------------*/
+    foreach ($rows as $row) {
+        if (empty($row[0])) {
+            continue; // skip empty rows
+        }
+
+        Category::create([
+            'name'       => trim($row[0]),
+            'remarks'    => $row[1] ?? '',
+            'status'     => 'Active',
+            'created_by' => $createdBy,
+
+            // OPTIONAL: store upload file path
+            // 'upload_file' => $s3Path,
+        ]);
+    }
+
+    return redirect()
+        ->back()
+        ->with('success', 'Categories uploaded successfully!');
+}
+
 
     public function store_category(Request $request)
     {
@@ -252,65 +295,81 @@ class Inventory extends Controller
         return view('inventory.subcategory_list', compact('subcategories', 'categories'));
     }
 
-    public function subcategory_bulk_upload(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:csv,xlsx,xls|max:2048'
-        ]);
 
-        $file = $request->file('file');
+public function subcategory_bulk_upload(Request $request)
+{
+    /* -----------------------------------------
+       1️⃣ Validate upload
+    ------------------------------------------*/
+    $request->validate([
+        'file' => 'required|mimes:csv,xlsx,xls|max:2048'
+    ]);
 
-        /* -----------------------------------------
-           1️⃣ Read file locally (existing working logic)
-        ------------------------------------------*/
-        $rows = array_map('str_getcsv', file($file->getRealPath()));
+    $file = $request->file('file');
 
-        // Remove header row
-        unset($rows[0]);
+    /* -----------------------------------------
+       2️⃣ Read file locally (CSV logic)
+    ------------------------------------------*/
+    $rows = array_map('str_getcsv', file($file->getRealPath()));
 
-        /* -----------------------------------------
-           2️⃣ Upload file to S3 (storage only)
-        ------------------------------------------*/
-        try {
-            $fileName = 'subcategories_' . time() . '_' . $file->getClientOriginalName();
+    // Remove header
+    unset($rows[0]);
 
-            Storage::disk('s3')->putFileAs(
-                'subcategory_bulk_uploads',
-                $file,
-                $fileName
-            );
-        } catch (\Exception $e) {
-            return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
-        }
+    /* -----------------------------------------
+       3️⃣ Upload file to S3 (storage only – SAFE)
+    ------------------------------------------*/
+    $s3Path = null;
 
-        $createdBy = session('role') === 'manager'
-            ? session('loginId')
-            : null;
+    try {
+        $fileName = 'subcategories_' . time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
 
-        /* -----------------------------------------
-           3️⃣ Insert into DB (unchanged logic)
-        ------------------------------------------*/
-        foreach ($rows as $row) {
-            if (!empty($row[0]) && !empty($row[1])) {
+        // Full S3 key (important)
+        $s3Path = 'subcategory_bulk_uploads/' . $fileName;
 
-                $category = Category::where('name', trim($row[0]))->first();
-
-                if ($category) {
-                    SubCategory::create([
-                        'category_id' => $category->id,
-                        'name' => trim($row[1]),
-                        'remarks' => $row[2] ?? '',
-                        'status' => 'Active',
-                        'created_by' => $createdBy,
-                    ]);
-                }
-            }
-        }
-
-        return redirect()
-            ->back()
-            ->with('success', 'Sub Categories uploaded successfully!');
+        Storage::disk('s3')->putFileAs(
+            'subcategory_bulk_uploads',
+            $file,
+            $fileName
+        );
+    } catch (\Exception $e) {
+        return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
     }
+
+    $createdBy = session('role') === 'manager'
+        ? session('loginId')
+        : null;
+
+    /* -----------------------------------------
+       4️⃣ Insert into DB (SAFE + VALIDATED)
+    ------------------------------------------*/
+    foreach ($rows as $row) {
+        // Require both category name & subcategory name
+        if (empty($row[0]) || empty($row[1])) {
+            continue;
+        }
+
+        $category = Category::where('name', trim($row[0]))->first();
+
+        if (!$category) {
+            continue; // skip if category does not exist
+        }
+
+        SubCategory::create([
+            'category_id' => $category->id,
+            'name'        => trim($row[1]),
+            'remarks'     => $row[2] ?? '',
+            'status'      => 'Active',
+            'created_by'  => $createdBy,
+
+            // OPTIONAL: store uploaded file path
+            // 'upload_file' => $s3Path,
+        ]);
+    }
+
+    return redirect()
+        ->back()
+        ->with('success', 'Sub Categories uploaded successfully!');
+}
 
 
     public function store_subcategory(Request $request)
@@ -1380,8 +1439,8 @@ public function item_list()
             'file' => 'required|mimes:csv,xlsx,xls|max:2048'
         ]);
 
-        $file = $request->file('file');
-        $extension = strtolower($file->getClientOriginalExtension());
+    $file = $request->file('file');
+    $extension = strtolower($file->getClientOriginalExtension());
 
         // 2️⃣ Read CSV / Excel
         if ($extension === 'csv') {
@@ -1399,14 +1458,14 @@ public function item_list()
         try {
             $fileName = 'items_' . time() . '_' . $file->getClientOriginalName();
 
-            Storage::disk('s3')->putFileAs(
-                'item_bulk_uploads',
-                $file,
-                $fileName
-            );
-        } catch (\Exception $e) {
-            return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
-        }
+        Storage::disk('s3')->putFileAs(
+            'item_bulk_uploads',
+            $file,
+            $fileName
+        );
+    } catch (\Exception $e) {
+        return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
+    }
 
         // 4️⃣ Process data
         $successCount = 0;
@@ -1435,18 +1494,18 @@ public function item_list()
                     ['status' => 'Active']
                 );
 
-                $category = Category::firstOrCreate(
-                    ['name' => $getValue(5, 'Default')],
-                    ['status' => 'Active']
-                );
+            $category = Category::firstOrCreate(
+                ['name' => $getValue(5, 'Default')],
+                ['status' => 'Active']
+            );
 
-                $subcategory = SubCategory::firstOrCreate(
-                    [
-                        'name' => $getValue(6, 'Default'),
-                        'category_id' => $category->id
-                    ],
-                    ['status' => 'Active']
-                );
+            $subcategory = SubCategory::firstOrCreate(
+                [
+                    'name' => $getValue(6, 'Default'),
+                    'category_id' => $category->id
+                ],
+                ['status' => 'Active']
+            );
 
                 // Insert or update Item
                 Item::updateOrCreate(
@@ -1477,14 +1536,19 @@ public function item_list()
                     ]
                 );
 
-                $successCount++;
+            $successCount++;
 
-            } catch (\Exception $e) {
-                $errorCount++;
-                $errors[] = "Row " . ($rowIndex + 1) . ": " . $e->getMessage();
-                \Log::error("Item import failed at row {$rowIndex}", ['error' => $e->getMessage()]);
-            }
+        } catch (\Exception $e) {
+            $errorCount++;
+            $errors[] = "Row " . ($rowIndex + 1) . ": " . $e->getMessage();
+            \Log::error("Item import failed at row {$rowIndex}", [
+                'error' => $e->getMessage()
+            ]);
         }
+        return redirect()
+        ->back()
+        ->with('success', 'Items uploaded successfully!');
+    }
 
         // 5️⃣ Response
         $message = "Upload complete! Successfully imported: {$successCount} items.";

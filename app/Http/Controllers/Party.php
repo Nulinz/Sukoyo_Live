@@ -273,64 +273,102 @@ class Party extends Controller
         ));
     }
 
+public function vendor_bulk_upload(Request $request)
+{
+    /* -----------------------------------------
+       1️⃣ Validate upload
+    ------------------------------------------*/
+    $request->validate([
+        'csv_file' => 'required|mimes:csv,txt|max:2048'
+    ]);
 
+    $empcode = Session::get('empcode');
+    $empname = Session::get('empname');
 
-    public function vendor_bulk_upload(Request $request)
-    {
-        $request->validate([
-            'csv_file' => 'required|mimes:csv,txt|max:2048'
-        ]);
+    $file = $request->file('csv_file');
 
-        $empcode = Session::get('empcode');
-        $empname = Session::get('empname');
+    /* -----------------------------------------
+       2️⃣ Upload file to S3 (STORAGE ONLY – SAFE)
+    ------------------------------------------*/
+    $s3Path = null;
 
-        $file = $request->file('csv_file');
+    try {
+        $fileName = 'vendors_' . time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
+        $s3Path   = 'vendor_uploads/' . $fileName;
 
-        // 1️⃣ Store file in S3
-        $path = $file->store('vendor_uploads', 's3'); // 'vendor_uploads' is the folder in your bucket
-        $s3Url = Storage::disk('s3')->url($path);     // Public URL if bucket allows
+        Storage::disk('s3')->putFileAs(
+            'vendor_uploads',
+            $file,
+            $fileName
+        );
 
-        // 2️⃣ Read CSV content
-        $csvData = file_get_contents($file);
-        $rows = array_map('str_getcsv', explode("\n", $csvData));
+    } catch (\Exception $e) {
+        return back()->with('error', 'S3 Upload Failed: ' . $e->getMessage());
+    }
 
-        // Remove header row
-        $header = array_shift($rows);
+    /* -----------------------------------------
+       3️⃣ Read CSV content (LOCAL)
+    ------------------------------------------*/
+    $rows = array_map('str_getcsv', file($file->getRealPath()));
 
-        $successCount = 0;
-        $errorCount = 0;
+    // Remove header row
+    unset($rows[0]);
 
-        foreach ($rows as $row) {
-            if (count($row) >= 13) { // Ensure we have enough columns
-                try {
-                    Vendor::create([
-                        'vendorname' => $row[0],
-                        'contact' => $row[1],
-                        'email' => $row[2],
-                        'openbalance' => $row[3],
-                        'tax' => $row[4],
-                        'topay' => filter_var($row[5], FILTER_VALIDATE_BOOLEAN),
-                        'tocollect' => filter_var($row[6], FILTER_VALIDATE_BOOLEAN),
-                        'gst' => $row[7],
-                        'panno' => $row[8],
-                        'creditperiod' => $row[9],
-                        'creditlimit' => $row[10],
-                        'billaddress' => $row[11],
-                        'shipaddress' => $row[12],
-                        'added_by' => $empcode,
-                        'added_by_name' => $empname,
-                        'file_url' => $s3Url, // Optional: store file URL in DB
-                    ]);
-                    $successCount++;
-                } catch (\Exception $e) {
-                    $errorCount++;
-                }
-            }
+    $successCount = 0;
+    $errorCount   = 0;
+
+    /* -----------------------------------------
+       4️⃣ Insert vendors into DB
+    ------------------------------------------*/
+    foreach ($rows as $row) {
+        // Skip invalid / empty rows
+        if (count(array_filter($row)) < 5) {
+            continue;
         }
 
-        $message = "Bulk upload completed. Success: {$successCount}, Errors: {$errorCount}. CSV stored at: {$s3Url}";
-        return redirect()->route('party.vendorlist')->with('success', $message);
+        try {
+            Vendor::create([
+                'vendorname'     => trim($row[0] ?? ''),
+                'contact'        => $row[1] ?? '',
+                'email'          => $row[2] ?? '',
+                'openbalance'    => $row[3] ?? 0,
+                'tax'            => $row[4] ?? '',
+                'topay'          => filter_var($row[5] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'tocollect'      => filter_var($row[6] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'gst'            => $row[7] ?? '',
+                'panno'          => $row[8] ?? '',
+                'creditperiod'   => $row[9] ?? 0,
+                'creditlimit'    => $row[10] ?? 0,
+                'billaddress'    => $row[11] ?? '',
+                'shipaddress'    => $row[12] ?? '',
+                'added_by'       => $empcode,
+                'added_by_name'  => $empname,
+
+                // OPTIONAL (recommended): store S3 path, NOT URL
+                // 'upload_file' => $s3Path,
+            ]);
+
+            $successCount++;
+
+        } catch (\Exception $e) {
+            $errorCount++;
+            \Log::error('Vendor bulk upload failed', [
+                'row'   => $row,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
+
+    /* -----------------------------------------
+       5️⃣ Response
+    ------------------------------------------*/
+    $message = "Bulk upload completed. Success: {$successCount}, Errors: {$errorCount}.";
+
+    return redirect()
+        ->route('party.vendorlist')
+        ->with('success', $message);
+}
+
 
 
 

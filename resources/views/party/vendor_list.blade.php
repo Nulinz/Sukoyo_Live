@@ -38,7 +38,7 @@
           <input type="file" name="csv_file" class="form-control" required accept=".csv">
 
           <div class="my-2">
-            <a href="{{ asset('public/sample/vendors.csv') }}" download class="text-primary">
+            <a href="{{ asset('sample/vendors.csv') }}" download class="text-primary">
               <i class="fas fa-download pe-2"></i>Download Sample CSV
             </a>
           </div>

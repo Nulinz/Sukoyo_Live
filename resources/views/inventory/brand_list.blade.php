@@ -42,7 +42,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <a href="{{ asset('public/sample/brand.csv') }}" download class="text-primary">
+                        <a href="{{ asset('sample/brand.csv') }}" download class="text-primary">
                             <i class="fas fa-download pe-2"></i>Download Sample CSV
                         </a>
                     </div>
