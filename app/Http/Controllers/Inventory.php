@@ -323,7 +323,7 @@ class Inventory extends Controller
 
         $createdBy = session('role') === 'manager' ? session('loginId') : null;
 
-        Subcategory::create([
+        SubCategory::create([
             'category_id' => $request->category_id,
             'name' => $request->name,
             'remarks' => $request->remarks,
@@ -1121,7 +1121,112 @@ class Inventory extends Controller
     //     return view('inventory.item_list', compact('items', 'items1'));
 // }
 
-    public function item_list()
+    // public function item_list()
+    // {
+    //     $role = Session::get('role');
+    //     $storeId = Session::get('store_id');
+
+    //     // Base query
+    //     $query = Item::with('brand', 'category', 'subcategory')
+    //         ->whereIn('item_type', ['Product', 'repacked']);
+
+    //     if ($role === 'manager') {
+    //         $query->where('store_id', $storeId);
+    //     } elseif ($role !== 'admin') {
+    //         return redirect()->back()->with('error', 'Unauthorized access');
+    //     }
+
+    //     $items = $query->get();
+
+    //     // Get purchased qty grouped
+    //     $purchased = PurchaseInvoiceItem::select('item', DB::raw('SUM(qty) as total'))
+    //         ->groupBy('item')
+    //         ->pluck('total', 'item');
+
+    //     // Get sold qty grouped
+    //     $sold = SalesInvoiceItem::select('item_id', DB::raw('SUM(qty) as total'))
+    //         ->groupBy('item_id')
+    //         ->pluck('total', 'item_id');
+
+    //     foreach ($items as $item) {
+    //         $opening = $item->opening_stock ?? 0;
+    //         $purchaseQty = $purchased[$item->id] ?? 0;
+    //         $soldQty = $sold[$item->id] ?? 0;
+
+    //         $item->current_stock = $opening + $purchaseQty - $soldQty;
+    //     }
+
+    //     $items1 = Item::all();
+
+    //     return view('inventory.item_list', compact('items', 'items1'));
+    // }
+
+//     public function item_list()
+// {
+//     $role = Session::get('role');
+//     $storeId = Session::get('store_id');
+
+//     // Base query (LIMIT columns)
+//     $query = Item::select(
+//             'id',
+//             'item_code',
+//             'item_name',
+//             'brand_id',
+//             'category_id',
+//             'subcategory_id',
+//             'opening_stock',
+//             'sales_price',
+//             'mrp',
+//             'stock_status',
+//             'store_id'
+//         )
+//         ->with([
+//             'brand:id,name',
+//             'category:id,name',
+//             'subcategory:id,name',
+//         ])
+//         ->whereIn('item_type', ['Product', 'repacked']);
+
+//     if ($role === 'manager') {
+//         $query->where('store_id', $storeId);
+//     } elseif ($role !== 'admin') {
+//         return redirect()->back()->with('error', 'Unauthorized access');
+//     }
+
+//     // ✅ Pagination instead of get()
+//     $items = $query->paginate(25);
+
+//     // Purchased qty (only for visible items)
+//     $purchased = PurchaseInvoiceItem::whereIn(
+//             'item',
+//             $items->pluck('id')
+//         )
+//         ->select('item', DB::raw('SUM(qty) as total'))
+//         ->groupBy('item')
+//         ->pluck('total', 'item');
+
+//     // Sold qty (only for visible items)
+//     $sold = SalesInvoiceItem::whereIn(
+//             'item_id',
+//             $items->pluck('id')
+//         )
+//         ->select('item_id', DB::raw('SUM(qty) as total'))
+//         ->groupBy('item_id')
+//         ->pluck('total', 'item_id');
+
+//     // Calculate current stock (25 rows only)
+//     foreach ($items as $item) {
+//         $opening = $item->opening_stock ?? 0;
+//         $purchaseQty = $purchased[$item->id] ?? 0;
+//         $soldQty = $sold[$item->id] ?? 0;
+
+//         $item->current_stock = $opening + $purchaseQty - $soldQty;
+//     }
+
+//     return view('inventory.item_list', compact('items'));
+// }
+
+public function item_list()
     {
         $role = Session::get('role');
         $storeId = Session::get('store_id');
@@ -1227,11 +1332,6 @@ class Inventory extends Controller
         return redirect()->route('inventory.itemlist')->with('success', 'Item added successfully');
     }
 
-
-
-
-
-    // app/Http/Controllers/InventoryController.php
 
     public function item_edit($id)
     {

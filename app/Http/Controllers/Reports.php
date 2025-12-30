@@ -19,7 +19,6 @@ use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 
 
-
 class Reports extends Controller
 {
     public function reports_list()

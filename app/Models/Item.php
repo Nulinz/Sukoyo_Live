@@ -61,7 +61,7 @@ public function uoms()
 {
     return $this->belongsTo(SubCategory::class, 'subcategory_id');
 }
-// Item.php
+
 public function purchaseOrderItems()
 {
     return $this->hasMany(PurchaseOrderItem::class);

@@ -11,15 +11,15 @@
     .modal-dialog {
         max-width: 500px;
     }
-    
+
     .barcode-input {
         position: relative;
     }
-    
+
     .barcode-input input {
         padding-right: 40px;
     }
-    
+
     .barcode-icon {
         position: absolute;
         right: 10px;
@@ -27,20 +27,42 @@
         transform: translateY(-50%);
         color: #6c757d;
     }
-    
+
     .scanner-feedback {
         font-size: 0.8em;
         margin-top: 5px;
     }
-    
+
     .scanner-feedback.success {
         color: #28a745;
     }
-    
+
     .scanner-feedback.error {
         color: #dc3545;
     }
-    
+#multipleItemsModal .table-hover tbody tr:hover {
+    background-color: #e9ecef;
+    cursor: pointer;
+}
+
+#multipleItemsModal .select-item-from-multiple {
+    white-space: nowrap;
+}
+
+#multipleItemsModal .table-danger {
+    background-color: #f8d7da !important;
+}
+
+#multipleItemsModal .table-warning {
+    background-color: #fff3cd !important;
+}
+
+#multipleItemsModal code {
+    background-color: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
 </style>
 
 <div class="container-fluid">
@@ -1141,6 +1163,131 @@ function initializeEventListeners() {
 //     }
 // }
 
+// function processBarcode() {
+//     const barcodeInput = document.getElementById('barcodeInput');
+//     const barcode = barcodeInput.value.trim();
+    
+//     if (!barcode) {
+//         showFeedback('Please scan or enter a barcode', 'error');
+//         return;
+//     }
+
+//     console.log('Processing barcode:', barcode);
+
+//     // Normalize the search term for better matching
+//     const normalizedBarcode = barcode.toLowerCase().replace(/\s+/g, ' ').trim();
+
+//     // Enhanced search logic for both regular items and batches
+//     const item = itemsData.find(item => {
+//         // Search by item code (case-insensitive, exact match)
+//         if (item.item_code && item.item_code.toString().toLowerCase() === normalizedBarcode) {
+//             return true;
+//         }
+        
+//         // Search by barcode field (case-insensitive, exact match)
+//         if (item.barcode && item.barcode.toString().toLowerCase() === normalizedBarcode) {
+//             return true;
+//         }
+        
+//         // Search by item ID (exact match)
+//         if (item.id && item.id.toString() === barcode) {
+//             return true;
+//         }
+        
+//         // For batch items, also search by batch number
+//         if (item.item_type === 'batch' && item.batch_no && 
+//             item.batch_no.toString().toLowerCase() === normalizedBarcode) {
+//             return true;
+//         }
+        
+//         // Search by item name (normalized, case-insensitive, exact match first)
+//         if (item.item_name) {
+//             const normalizedItemName = item.item_name.toLowerCase().replace(/\s+/g, ' ').trim();
+            
+//             // Exact match
+//             if (normalizedItemName === normalizedBarcode) {
+//                 return true;
+//             }
+            
+//             // Partial match (contains)
+//             if (normalizedItemName.includes(normalizedBarcode)) {
+//                 return true;
+//             }
+//         }
+        
+//         // Search by display_name if it exists
+//         if (item.display_name) {
+//             const normalizedDisplayName = item.display_name.toLowerCase().replace(/\s+/g, ' ').trim();
+            
+//             // Exact match
+//             if (normalizedDisplayName === normalizedBarcode) {
+//                 return true;
+//             }
+            
+//             // Partial match (contains)
+//             if (normalizedDisplayName.includes(normalizedBarcode)) {
+//                 return true;
+//             }
+//         }
+        
+//         return false;
+//     });
+
+//     if (item) {
+//         // Check stock quantity first
+//         const currentStock = parseFloat(item.current_stock) || 0;
+//         if (currentStock <= 0) {
+//             const itemTypeText = item.item_type === 'batch' ? `(Batch: ${item.batch_no})` : '';
+//             showFeedback(`✗ Out of stock: ${item.item_name} ${itemTypeText}. Available: ${currentStock}`, 'error');
+//             barcodeInput.value = '';
+//             setTimeout(() => {
+//                 barcodeInput.focus();
+//                 clearFeedback();
+//             }, 3000);
+//             return;
+//         }
+        
+//         // Check if batch item is expired
+//         if (item.item_type === 'batch' && item.exp_date) {
+//             const expDate = new Date(item.exp_date);
+//             const now = new Date();
+            
+//             if (expDate < now) {
+//                 showFeedback(`✗ Cannot add expired batch item: ${item.item_name} (Batch: ${item.batch_no})`, 'error');
+//                 barcodeInput.value = '';
+//                 setTimeout(() => {
+//                     barcodeInput.focus();
+//                     clearFeedback();
+//                 }, 3000);
+//                 return;
+//             }
+//         }
+
+//         // Item found, add to bill with quantity 1
+//         addItemToBill(item);
+//         barcodeInput.value = '';
+        
+//         const itemTypeText = item.item_type === 'batch' ? `batch item ${item.batch_no}` : 'item';
+//         showFeedback(`✓ ${item.item_name} (${itemTypeText}) added successfully`, 'success');
+        
+//         setTimeout(() => {
+//             barcodeInput.focus();
+//             clearFeedback();
+//         }, 1500);
+//     } else {
+//         showFeedback(`✗ Item not found: ${barcode}`, 'error');
+        
+//         // Log available items for debugging
+//         console.log('Available items:', itemsData.map(i => i.item_name || i.display_name));
+        
+//         setTimeout(() => {
+//             barcodeInput.select();
+//             clearFeedback();
+//         }, 3000);
+//     }
+// }
+
+
 function processBarcode() {
     const barcodeInput = document.getElementById('barcodeInput');
     const barcode = barcodeInput.value.trim();
@@ -1152,11 +1299,10 @@ function processBarcode() {
 
     console.log('Processing barcode:', barcode);
 
-    // Normalize the search term for better matching
     const normalizedBarcode = barcode.toLowerCase().replace(/\s+/g, ' ').trim();
 
-    // Enhanced search logic for both regular items and batches
-    const item = itemsData.find(item => {
+    // ✅ CHANGED: Use filter() instead of find() to get ALL matching items
+    const matchingItems = itemsData.filter(item => {
         // Search by item code (case-insensitive, exact match)
         if (item.item_code && item.item_code.toString().toLowerCase() === normalizedBarcode) {
             return true;
@@ -1178,45 +1324,50 @@ function processBarcode() {
             return true;
         }
         
-        // Search by item name (normalized, case-insensitive, exact match first)
-        if (item.item_name) {
-            const normalizedItemName = item.item_name.toLowerCase().replace(/\s+/g, ' ').trim();
-            
-            // Exact match
-            if (normalizedItemName === normalizedBarcode) {
-                return true;
-            }
-            
-            // Partial match (contains)
-            if (normalizedItemName.includes(normalizedBarcode)) {
-                return true;
-            }
-        }
-        
-        // Search by display_name if it exists
-        if (item.display_name) {
-            const normalizedDisplayName = item.display_name.toLowerCase().replace(/\s+/g, ' ').trim();
-            
-            // Exact match
-            if (normalizedDisplayName === normalizedBarcode) {
-                return true;
-            }
-            
-            // Partial match (contains)
-            if (normalizedDisplayName.includes(normalizedBarcode)) {
-                return true;
-            }
-        }
-        
         return false;
     });
 
-    if (item) {
-        // Check stock quantity first
-        const currentStock = parseFloat(item.current_stock) || 0;
-        if (currentStock <= 0) {
-            const itemTypeText = item.item_type === 'batch' ? `(Batch: ${item.batch_no})` : '';
-            showFeedback(`✗ Out of stock: ${item.item_name} ${itemTypeText}. Available: ${currentStock}`, 'error');
+    console.log('Matching items found:', matchingItems.length);
+
+    if (matchingItems.length === 0) {
+        showFeedback(`✗ Item not found: ${barcode}`, 'error');
+        setTimeout(() => {
+            barcodeInput.select();
+            clearFeedback();
+        }, 3000);
+        return;
+    }
+
+    // ✅ NEW: If multiple items found, show selection modal
+    if (matchingItems.length > 1) {
+        showItemSelectionModal(matchingItems, barcode);
+        barcodeInput.value = '';
+        return;
+    }
+
+    // Single item found - process normally
+    const item = matchingItems[0];
+    
+    // Check stock
+    const currentStock = parseFloat(item.current_stock) || 0;
+    if (currentStock <= 0) {
+        const itemTypeText = item.item_type === 'batch' ? `(Batch: ${item.batch_no})` : '';
+        showFeedback(`✗ Out of stock: ${item.item_name} ${itemTypeText}. Available: ${currentStock}`, 'error');
+        barcodeInput.value = '';
+        setTimeout(() => {
+            barcodeInput.focus();
+            clearFeedback();
+        }, 3000);
+        return;
+    }
+    
+    // Check if batch item is expired
+    if (item.item_type === 'batch' && item.exp_date) {
+        const expDate = new Date(item.exp_date);
+        const now = new Date();
+        
+        if (expDate < now) {
+            showFeedback(`✗ Cannot add expired batch item: ${item.item_name} (Batch: ${item.batch_no})`, 'error');
             barcodeInput.value = '';
             setTimeout(() => {
                 barcodeInput.focus();
@@ -1224,46 +1375,165 @@ function processBarcode() {
             }, 3000);
             return;
         }
+    }
+
+    // Add item to bill
+    addItemToBill(item);
+    barcodeInput.value = '';
+    
+    const itemTypeText = item.item_type === 'batch' ? `batch item ${item.batch_no}` : 'item';
+    showFeedback(`✓ ${item.item_name} (${itemTypeText}) added successfully`, 'success');
+    
+    setTimeout(() => {
+        barcodeInput.focus();
+        clearFeedback();
+    }, 1500);
+}
+
+// ✅ NEW FUNCTION: Show item selection modal when multiple items match
+function showItemSelectionModal(items, searchTerm) {
+    // Clear existing modal content if any
+    const existingModal = document.getElementById('multipleItemsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Create modal HTML
+    const modalHTML = `
+        <div class="modal fade" id="multipleItemsModal" tabindex="-1" aria-labelledby="multipleItemsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="multipleItemsModalLabel">
+                            <i class="fas fa-box-open me-2"></i>Multiple Items Found for "${searchTerm}"
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-info-circle"></i> 
+                            ${items.length} items found with this code. Please select the item you want to add:
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Item Name</th>
+                                        <th>Item Code</th>
+                                        <th>Batch No</th>
+                                        <th>Price</th>
+                                        <th>Stock</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="multipleItemsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Append modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Get modal elements
+    const modal = new bootstrap.Modal(document.getElementById('multipleItemsModal'));
+    const tbody = document.getElementById('multipleItemsTableBody');
+
+    // Populate table with items
+    items.forEach((item, index) => {
+        const isBatch = item.item_type === 'batch';
+        let isExpired = false;
+        let isExpiringSoon = false;
         
-        // Check if batch item is expired
-        if (item.item_type === 'batch' && item.exp_date) {
+        if (isBatch && item.exp_date) {
             const expDate = new Date(item.exp_date);
             const now = new Date();
-            
-            if (expDate < now) {
-                showFeedback(`✗ Cannot add expired batch item: ${item.item_name} (Batch: ${item.batch_no})`, 'error');
-                barcodeInput.value = '';
-                setTimeout(() => {
-                    barcodeInput.focus();
-                    clearFeedback();
-                }, 3000);
-                return;
-            }
+            isExpired = expDate < now;
+            isExpiringSoon = !isExpired && ((expDate - now) / (1000 * 60 * 60 * 24)) <= 30;
         }
 
-        // Item found, add to bill with quantity 1
-        addItemToBill(item);
-        barcodeInput.value = '';
+        const row = document.createElement('tr');
+        row.className = isExpired ? 'table-danger' : (isExpiringSoon ? 'table-warning' : '');
         
-        const itemTypeText = item.item_type === 'batch' ? `batch item ${item.batch_no}` : 'item';
-        showFeedback(`✓ ${item.item_name} (${itemTypeText}) added successfully`, 'success');
+        row.innerHTML = `
+            <td>
+                <span class="badge ${isBatch ? 'bg-info' : 'bg-success'}">
+                    ${isBatch ? 'BATCH' : 'ITEM'}
+                </span>
+            </td>
+            <td class="fw-semibold">${item.item_name}</td>
+            <td><code>${item.item_code || '-'}</code></td>
+            <td>${isBatch ? `<span class="badge bg-secondary">${item.batch_no}</span>` : '-'}</td>
+            <td class="text-end">₹${parseFloat(item.sales_price || 0).toFixed(2)}</td>
+            <td class="text-center">
+                ${item.current_stock || 0}
+                ${isExpired ? '<div class="text-danger small">EXPIRED</div>' : ''}
+                ${isExpiringSoon ? '<div class="text-warning small">EXPIRING SOON</div>' : ''}
+            </td>
+            <td>
+                <button 
+                    type="button" 
+                    class="btn btn-sm btn-primary select-item-from-multiple"
+                    data-item-index="${index}"
+                    ${isExpired ? 'disabled title="Item is expired"' : ''}
+                >
+                    <i class="fas fa-check"></i> Select
+                </button>
+            </td>
+        `;
         
+        tbody.appendChild(row);
+    });
+
+    // Add click handlers for select buttons
+    document.querySelectorAll('.select-item-from-multiple').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemIndex = parseInt(this.getAttribute('data-item-index'));
+            const selectedItem = items[itemIndex];
+            
+            // Close modal
+            modal.hide();
+            
+            // Add selected item to bill
+            addItemToBill(selectedItem);
+            
+            const itemTypeText = selectedItem.item_type === 'batch' ? 
+                `batch item ${selectedItem.batch_no}` : 'item';
+            showFeedback(
+                `✓ ${selectedItem.item_name} (${itemTypeText}) added successfully`, 
+                'success'
+            );
+            
+            setTimeout(() => {
+                document.getElementById('barcodeInput').focus();
+                clearFeedback();
+            }, 1500);
+        });
+    });
+
+    // Clean up modal after it's hidden
+    document.getElementById('multipleItemsModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+        // Refocus on barcode input
         setTimeout(() => {
-            barcodeInput.focus();
-            clearFeedback();
-        }, 1500);
-    } else {
-        showFeedback(`✗ Item not found: ${barcode}`, 'error');
-        
-        // Log available items for debugging
-        console.log('Available items:', itemsData.map(i => i.item_name || i.display_name));
-        
-        setTimeout(() => {
-            barcodeInput.select();
-            clearFeedback();
-        }, 3000);
-    }
+            document.getElementById('barcodeInput').focus();
+        }, 100);
+    });
+
+    // Show the modal
+    modal.show();
 }
+
 
 function addItemToBill(item) {
     const qty = 1;

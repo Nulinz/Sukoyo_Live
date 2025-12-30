@@ -4,7 +4,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-class Subcategory extends Model
+class SubCategory extends Model
 {
   protected $table = 'subcategories'; // Add this line to specify the correct table name
     

@@ -223,7 +223,7 @@ Route::group(['namespace' => 'App\Http\Controllers'], function () {
     Route::get('purchase-inv-add', 'Purchase@inv_add')->name('purchase.inv_add');
     Route::post('purchase-invoice-store', 'Purchase@storeInvoice')->name('purchase.invoice.store');
 
-    Route::get('purchase-order-data/{id}', 'Purchase@get_order_data')->name('purchase.get_order_data');
+    Route::get('purchase-order-daxa/{id}', 'Purchase@get_order_data')->name('purchase.get_order_data');
     Route::get('purchase-inv-edit', 'Purchase@inv_edit')->name('purchase.inv_edit');
     Route::get('purchase-inv-profile/{id}', 'Purchase@inv_profile')->name('purchase.inv_profile');
     Route::get('/vendor-details/{id}', 'Purchase@getVendorDetails');
@@ -257,6 +257,18 @@ Route::group(['namespace' => 'App\Http\Controllers'], function () {
     Route::post('/pos/process-return', 'POS@processReturn')->name('pos.processReturn');
 
     Route::post('/check-gift-card-balance', 'POS@checkGiftCardBalance')->name('check.gift.card.balance');
+    Route::get('/items/by-code/{code}', 'POS@getItemsByCode');
+
+    Route::post('/ajax/fetch-item-by-code', 'POS@fetchItemByCode')
+        ->name('fetch.item.by.code');
+
+
+    Route::get('/ajax-items', 'POS@ajaxItemList')
+        ->name('ajax.items');
+
+
+    Route::post('/pos/search-barcode', 'POS@searchByBarcode')
+        ->name('pos.search.barcode');
 
     // If you want to add more gift card related routes:
     Route::group(['prefix' => 'gift-cards'], function () {
@@ -436,6 +448,6 @@ Route::group(['namespace' => 'App\Http\Controllers'], function () {
         ]);
     });
 
-
+    Route::get('/export-items', 'ItemController@exportItemsCsv');
 
 });
