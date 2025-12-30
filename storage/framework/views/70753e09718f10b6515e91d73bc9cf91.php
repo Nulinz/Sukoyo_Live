@@ -101,7 +101,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <a href="<?php echo e(asset('public/sample/items.csv')); ?>" download class="text-primary">
+                    <a href="<?php echo e(asset('sample/items.csv')); ?>" download class="text-primary">
                         <i class="fas fa-download pe-2"></i>Download Sample CSV
                     </a>
                 </div>
